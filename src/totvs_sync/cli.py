@@ -12,6 +12,7 @@ import logging
 import sys
 from pathlib import Path
 
+from .ambiente import carregar_dotenv
 from .banco import Banco, ConfiguracaoBanco
 from .configuracao import Configuracao, carregar_configuracao
 from .leitor_csv import LeitorExportacao
@@ -47,6 +48,11 @@ def _montar_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--lote", type=int, default=1000, metavar="N",
         help="registros por lote na carga (padrão: 1000)",
+    )
+    parser.add_argument(
+        "--env", type=Path, default=Path(".env"), metavar="ARQUIVO",
+        help="arquivo de variáveis de ambiente (padrão: .env). "
+             "O que já estiver exportado no ambiente tem precedência.",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="log em nível DEBUG",
@@ -134,6 +140,10 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s %(levelname)-7s %(message)s",
         stream=sys.stderr,
     )
+
+    # O ambiente já exportado tem precedência sobre o arquivo.
+    if carregar_dotenv(args.env):
+        logger.debug("variáveis carregadas de %s", args.env)
 
     try:
         config = carregar_configuracao(args.config)

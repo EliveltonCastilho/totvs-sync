@@ -225,6 +225,19 @@ anteriores.
 * Oracle 12.2+ — testado em Oracle Free 23 e Autonomous Database 19c
 * `python-oracledb` em *thin mode*: **não** exige o Oracle Instant Client instalado
 
+### Conectando a uma Autonomous Database
+
+Com o mTLS marcado como *not required*, basta a connect string TLS do console em
+`ORACLE_DSN` — sem wallet. Usando wallet, aponte `ORACLE_WALLET_DIR` para a pasta
+descompactada (guardada **fora** do repositório, com permissão 700) e use o alias
+do `tnsnames.ora` como DSN — `saas_tp` para carga transacional; `saas_high` e
+companhia são para consulta analítica com paralelismo.
+
+Um detalhe que costuma custar meia hora: o *thin mode* lê o `ewallet.pem`, **não**
+o `cwallet.sso` de auto-login. Se o `.pem` estiver cifrado — a primeira linha diz
+`BEGIN ENCRYPTED PRIVATE KEY` — a senha da wallet definida no console passa a ser
+obrigatória em `ORACLE_WALLET_PASSWORD`.
+
 ## Limitações conhecidas
 
 * **Carga é *full refresh*.** Cada execução substitui a tabela inteira. Delta real
