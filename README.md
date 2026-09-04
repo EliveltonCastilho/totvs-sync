@@ -39,10 +39,10 @@ totvs-sync --config tabelas.toml
 ```
 
 ```
-2026-09-04 14:02:11 INFO    ERP_PRODUTO: 4961 registros promovidos (39 rejeitados, 1 colunas ignoradas)
-2026-09-04 14:02:11 WARNING ERP_PRODUTO: rejeições em exportacao/SB1_linhas_invalidas.log
-2026-09-04 14:02:19 INFO    ERP_PEDIDO_ITEM: 8000 registros promovidos (0 rejeitados, 0 colunas ignoradas)
-2026-09-04 14:02:19 INFO    ERP_CLIENTE: já atualizado
+2026-09-04 14:16:42 INFO    ERP_PRODUTO: 4961 registros | 63 rejeitados | 1 colunas ignoradas
+2026-09-04 14:16:42 WARNING ERP_PRODUTO: rejeições em exportacao/SB1_linhas_invalidas.log
+2026-09-04 14:16:43 INFO    ERP_PEDIDO_ITEM: 20000 registros | 0 rejeitados | 0 colunas ignoradas
+2026-09-04 14:17:04 INFO    ERP_PRODUTO: já atualizado
 ```
 
 ---
@@ -100,7 +100,15 @@ contagem cheia de campos; uma continuação de texto traz menos.
 Há um caso que **nenhum** parser resolve, e o código diz isso em vez de fingir: se o
 texto quebrado também contém o delimitador sem aspas, a informação de onde o campo
 termina não existe no arquivo. Esse registro vira rejeição registrada no log — não
-um palpite. [`leitor_csv.py`](src/totvs_sync/leitor_csv.py)
+um palpite.
+
+Descartar o registro não basta, e essa parte só apareceu carregando 25 mil linhas
+num banco de verdade: a **sobra** do registro descartado emenda no próximo registro
+bom e cola o fim de um texto na primeira coluna dele. A leitura não acusa nada — o
+erro aparece lá adiante, como `ORA-12899: value too large for column`. Por isso,
+depois de uma rejeição o leitor ressincroniza: só volta a aceitar início de registro
+numa linha com a contagem cheia de campos.
+[`leitor_csv.py`](src/totvs_sync/leitor_csv.py)
 
 ### 5. Uma linha ruim nunca derruba o arquivo
 
@@ -218,6 +226,16 @@ tipo e a **ordem dos comandos** da carga — um teste falha se alguém trocar o
 verdade (`gvenzl/oracle-free` no CI, ou uma Autonomous Database) e provam o que só
 um banco prova: que a promoção é atômica e que uma falha preserva os dados
 anteriores.
+
+São 104 testes. Os dois defeitos mais interessantes do projeto — a contaminação do
+registro seguinte após uma rejeição, e o `NUMBER` voltando como `float` — foram
+encontrados por eles e por uma carga real, não por leitura de código; cada um tem
+hoje um teste de regressão.
+
+Validado ponta a ponta contra uma **Oracle Autonomous Database 19c**: 25 mil
+registros carregados, 63 rejeições registradas em log, acentuação preservada na
+conversão latin-1 → AL32UTF8, sentinelas de data convertidas em `NULL` e segunda
+execução corretamente pulada pela marca d'água.
 
 ## Requisitos
 

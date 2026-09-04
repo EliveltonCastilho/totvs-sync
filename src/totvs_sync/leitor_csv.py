@@ -112,11 +112,25 @@ class LeitorExportacao:
             acumulado: list[str] | None = None
             linha_inicial = LINHAS_PREAMBULO + 1
             linhas_acumuladas = 0
+            ressincronizando = False
 
             for numero, linha_fisica, campos, seguinte in self._com_lookahead(arquivo):
                 if campos is None:
                     self._rejeitar(numero, "linha ilegível", linha_fisica)
                     continue
+
+                # Depois de descartar um registro corrompido, as linhas seguintes
+                # ainda são o rabo dele. Sem esta guarda, essa sobra começa uma
+                # acumulação nova e emenda no **próximo registro bom** — que passa
+                # a ter o fim do texto anterior colado na primeira coluna. O erro
+                # não aparece na leitura: aparece lá na frente, como valor grande
+                # demais para a coluna. Só uma linha com a contagem cheia de campos
+                # é aceita como começo de registro de novo.
+                if ressincronizando:
+                    if len(campos) != esperados:
+                        self._rejeitar(numero, "sobra de registro inválido", linha_fisica)
+                        continue
+                    ressincronizando = False
 
                 if acumulado is None:
                     acumulado = campos
@@ -129,12 +143,14 @@ class LeitorExportacao:
                 if len(acumulado) > esperados:
                     self._rejeitar(linha_inicial, "campos demais", _juntar(acumulado))
                     acumulado = None
+                    ressincronizando = True
                     continue
 
                 if len(acumulado) < esperados:
                     if linhas_acumuladas >= MAX_LINHAS_POR_REGISTRO:
                         self._rejeitar(linha_inicial, "registro não fecha", _juntar(acumulado))
                         acumulado = None
+                        ressincronizando = True
                     continue  # incompleto: o campo continua na próxima linha física
 
                 # A contagem fechou — mas isso ainda não quer dizer que o registro

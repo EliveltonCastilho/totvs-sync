@@ -52,6 +52,26 @@ def identificador(nome: str) -> str:
     return nome.upper()
 
 
+def _decimal_para_numeros_com_escala(cursor, metadata):
+    """Faz ``NUMBER`` com casas decimais voltar como ``Decimal``, não ``float``.
+
+    O padrão do ``python-oracledb`` é devolver ``NUMBER`` como ``float`` quando há
+    escala. Para valor monetário isso é um erro esperando acontecer: ``float`` é
+    binário e não representa ``0.1`` exatamente, então somas de preço acumulam
+    diferença de centavo — e a conta bate no banco mas não no relatório.
+
+    ``NUMBER`` sem escala continua vindo como ``int``, que é o certo para
+    quantidade, código e contador.
+    """
+    import decimal
+
+    import oracledb
+
+    if metadata.type_code is oracledb.DB_TYPE_NUMBER and metadata.scale:
+        return cursor.var(decimal.Decimal, arraysize=cursor.arraysize)
+    return None
+
+
 @dataclass(frozen=True)
 class ConfiguracaoBanco:
     """Parâmetros de conexão, lidos do ambiente."""
@@ -115,6 +135,7 @@ class Banco:
                 parametros["wallet_password"] = senha
 
         self._conexao = oracledb.connect(**parametros)
+        self._conexao.outputtypehandler = _decimal_para_numeros_com_escala
 
         if self.config.esquema:
             # Evita qualificar cada objeto no SQL.

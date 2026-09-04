@@ -95,6 +95,19 @@ def test_carga_completa_grava_os_tipos_certos(banco, exportacao):
     assert linhas[2]["B1_DTCAD"] is None                 # sentinela 00000000
 
 
+def test_number_com_escala_volta_como_decimal_e_nao_float(banco, exportacao):
+    """float não representa 0.1 exatamente: somar preço em float perde centavo."""
+    sincronizar(banco, Tabela(nome=TABELA, arquivo="SB1.csv"), exportacao)
+
+    linha = banco.consultar(
+        f"SELECT b1_preco, b1_qtd FROM {TABELA} WHERE b1_cod = 'P1'"
+    )[0]
+
+    assert isinstance(linha["B1_PRECO"], Decimal)  # NUMBER(15,4)
+    assert isinstance(linha["B1_QTD"], int)        # NUMBER(10) — sem escala
+    assert not isinstance(linha["B1_PRECO"], float)
+
+
 def test_segunda_execucao_nao_recarrega(banco, exportacao):
     tabela = Tabela(nome=TABELA, arquivo="SB1.csv")
 
