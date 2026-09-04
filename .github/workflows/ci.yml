@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    name: Testes unitários
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Instalar
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src tests tools
+
+      - name: Testes
+        run: pytest
+
+  integracao:
+    name: Integração com Oracle
+    runs-on: ubuntu-latest
+    services:
+      oracle:
+        # Oracle Database Free — a imagem oficial leve para CI.
+        image: gvenzl/oracle-free:23-slim
+        env:
+          ORACLE_PASSWORD: ${{ secrets.ORACLE_TEST_PASSWORD || 'Teste_1234' }}
+        ports:
+          - 1521:1521
+        options: >-
+          --health-cmd healthcheck.sh
+          --health-interval 20s
+          --health-timeout 10s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar
+        run: pip install -e ".[dev]"
+
+      # python-oracledb em thin mode dispensa o Instant Client, então não há
+      # passo de instalação de cliente Oracle aqui.
+      - name: Testes de integração
+        env:
+          ORACLE_USER: system
+          ORACLE_PASSWORD: ${{ secrets.ORACLE_TEST_PASSWORD || 'Teste_1234' }}
+          ORACLE_DSN: localhost:1521/FREEPDB1
+        run: pytest tests/test_integracao_oracle.py -v

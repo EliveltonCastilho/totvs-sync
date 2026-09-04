@@ -1,0 +1,19 @@
+# Configuração do sincronizador.
+#
+# Acrescentar uma tabela é editar este arquivo — não há código por tabela.
+# Copie para tabelas.toml e ajuste o diretório.
+
+# Onde o ERP deposita os CSVs. Em produção costuma ser um ponto de montagem de rede.
+diretorio = "./exportacao"
+
+[[tabela]]
+nome = "ERP_PRODUTO"
+arquivo = "SB1.csv"
+# Prefixo dos campos no dicionário do ERP. Permite que o cabeçalho do CSV venha
+# com o rótulo amigável ("Codigo") em vez do código do campo ("B1_COD").
+prefixo_dicionario = "B1_"
+
+[[tabela]]
+nome = "ERP_PEDIDO_ITEM"
+arquivo = "SC6.csv"
+prefixo_dicionario = "C6_"

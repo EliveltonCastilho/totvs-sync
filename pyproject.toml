@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "totvs-sync"
+version = "1.0.0"
+description = "Sincronizador incremental de exportações CSV de ERP para Oracle, tolerante a arquivo sujo."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Elivelton Castilho" }]
+keywords = ["etl", "oracle", "erp", "totvs", "csv", "integração"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Database",
+  "Natural Language :: Portuguese (Brazilian)",
+]
+
+# python-oracledb em thin mode: não exige o Oracle Instant Client na máquina.
+dependencies = ["oracledb>=2.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+totvs-sync = "totvs_sync.cli:main"
+
+[project.urls]
+Repository = "https://github.com/EliveltonCastilho/totvs-sync"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/totvs_sync"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
